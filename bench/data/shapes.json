@@ -1,0 +1,67 @@
+{
+  "seed": 7,
+  "dtype": "float32",
+  "order": "C",
+  "endianness": "little",
+  "tensors": {
+    "mc_euro_normals": {
+      "shape": [
+        100000,
+        100
+      ],
+      "file": "mc_euro_normals.f32"
+    },
+    "mc_asian_normals": {
+      "shape": [
+        50000,
+        64
+      ],
+      "file": "mc_asian_normals.f32"
+    },
+    "heston_zs": {
+      "shape": [
+        20000,
+        250
+      ],
+      "file": "heston_zs.f32"
+    },
+    "heston_zv": {
+      "shape": [
+        20000,
+        250
+      ],
+      "file": "heston_zv.f32"
+    },
+    "cir_normals": {
+      "shape": [
+        50000,
+        250
+      ],
+      "file": "cir_normals.f32"
+    },
+    "var_losses": {
+      "shape": [
+        1000000
+      ],
+      "file": "var_losses.f32"
+    },
+    "mlp_weights": {
+      "shape": [
+        1589760
+      ],
+      "file": "mlp_weights.f32",
+      "layer_dims": [
+        32,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        1
+      ],
+      "layout": "layer-major flat [in_dim*512, 512*512*7, 512*1]"
+    }
+  }
+}

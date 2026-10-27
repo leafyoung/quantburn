@@ -1,0 +1,14 @@
+{
+  "backend": "burn-cpu",
+  "mode": "bench",
+  "W1": {"min_ms": 1.1861000000000002, "median_ms": 1.3198325, "iters": 10},
+  "W2": {"min_ms": 4.775549, "median_ms": 4.8925035, "iters": 10},
+  "W3": {"min_ms": 8.785082, "median_ms": 9.463901, "iters": 10},
+  "W4": {"min_ms": 5296.0214639999995, "median_ms": 5481.750495, "iters": 10},
+  "W5": {"min_ms": 857.543998, "median_ms": 1055.0853405, "iters": 10},
+  "W6": {"min_ms": 11461.572666, "median_ms": 12209.287528500001, "iters": 10},
+  "W7": {"min_ms": 16055.980445, "median_ms": 18636.956497, "iters": 10},
+  "W8": {"min_ms": 15678.795376, "median_ms": 15937.1238085, "iters": 10},
+  "W9": {"min_ms": 46.362198, "median_ms": 46.6600425, "iters": 10},
+  "W10": {"min_ms": 4832.02009, "median_ms": 4958.8416995, "iters": 10}
+}
