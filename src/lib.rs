@@ -17,6 +17,7 @@ pub mod bermudan_option;
 pub mod black_scholes_merton;
 pub mod exotics;
 pub mod option_utils;
+pub mod vanilla_analytics;
 
 // Models
 pub mod binomial_tree_model;
