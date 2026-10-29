@@ -115,6 +115,33 @@ def lookback_option(option_type, spot, strike, expiry, volatility, rate, num_pat
     return total / num_paths
 
 
+# Broadie-Glasserman-Kou (1997) continuity correction: beta = -zeta(1/2)/sqrt(2*pi).
+BGK_BETA = 0.5825971579390108
+
+
+def lookback_option_continuous(option_type, spot, strike, expiry, volatility, rate, num_paths, strike_type, seed):
+    """Continuous-monitoring lookback via the BGK (1997) correction on the
+    discrete estimator: inflate the running max by e^{+beta*sigma*sqrt(dt)},
+    deflate the running min by e^{-beta*sigma*sqrt(dt)}."""
+    dt = expiry / 252
+    num_steps = int(expiry / dt)
+    drift = (rate - 0.5 * volatility**2) * dt
+    sig_dt = volatility * math.sqrt(dt)
+    disc = math.exp(-rate * expiry)
+    up = math.exp(BGK_BETA * volatility * math.sqrt(dt))
+    dn = math.exp(-BGK_BETA * volatility * math.sqrt(dt))
+    paths = _sim_paths(seed, num_paths, num_steps, spot, drift, sig_dt)
+    total = 0.0
+    for row in paths:
+        last, mx, mn = row[-1], max(row) * up, min(row) * dn
+        if option_type == "call":
+            payoff = max(mx - strike, 0.0) if strike_type == "fixed" else max(last - mx, 0.0)
+        else:
+            payoff = max(strike - mn, 0.0) if strike_type == "fixed" else max(mn - last, 0.0)
+        total += payoff * disc
+    return total / num_paths
+
+
 def asian_option(option_type, spot, strike, expiry, volatility, rate, num_paths, num_steps, average_type, seed):
     dt = expiry / num_steps
     drift = (rate - 0.5 * volatility**2) * dt
@@ -204,6 +231,10 @@ if __name__ == "__main__":
     print("barrier di :", repr(barrier_option("put", "down-and-in", 100, 100, 85, 1, 0.2, 0.05, 500, 50, 1237)))
     print("lookback f :", repr(lookback_option("call", 100, 100, 0.5, 0.2, 0.05, 200, "fixed", 1238)))
     print("lookback fl:", repr(lookback_option("put", 100, 100, 0.5, 0.2, 0.05, 200, "floating", 1239)))
+    print("lk cont f  :", repr(lookback_option_continuous("call", 100, 100, 0.5, 0.2, 0.05, 200, "fixed", 1244)))
+    print("lk cont 2e5:", repr(lookback_option_continuous("call", 100, 100, 1, 0.2, 0.05, 200000, "fixed", 1244)))
+    print("lk cont put:", repr(lookback_option_continuous("put", 100, 100, 1, 0.2, 0.05, 200000, "fixed", 1245)))
+    print("lk disc 2e5:", repr(lookback_option("call", 100, 100, 1, 0.2, 0.05, 200000, "fixed", 1244)))
     print("asian a    :", repr(asian_option("call", 100, 100, 1, 0.2, 0.05, 1000, 50, "arithmetic", 1240)))
     print("asian g    :", repr(asian_option("put", 100, 100, 1, 0.2, 0.05, 1000, 50, "geometric", 1241)))
     print("quanto     :", repr(quanto_option(100, 100, 1, 0.2, 0.1, 0.3, 0.05, 0.02, 7.8, 1000, 1242)))

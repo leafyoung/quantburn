@@ -1,8 +1,14 @@
-"""Reference generator for quantburn/src/malliavin.rs tests.
+"""Reference generator for quantburn/src/greeks.rs tests.
 
-Re-implements torchquantlib/core/risk/greeks/malliavin.py in pure float64,
+Re-implements torchquantlib/core/risk/greeks/greeks.py in pure float64,
 drawing normals from scripts/refgen.py with the SAME seed as the Rust code
 (3001). Prints expected values to embed in the Rust tests.
+
+2026-10-29: `european` and `digital` use the corrected likelihood-ratio /
+pathwise weights (verified vs QuantLib 1.44 AnalyticEuropeanEngine; the old
+S_T-derivative weights biased every European greek by 26x-386x). `barrier`,
+`lookback`, `basket` and `asian` still generate the OLD (biased) weights and
+are marked BIASED / UNDER REVIEW in both implementations.
 """
 import math
 import sys
@@ -18,41 +24,57 @@ def mean(xs):
 
 
 def european(s0, k, t, r, sigma, n, seed):
+    # LR delta / 2nd-order LR gamma, pathwise vega, BS-PDE theta, identity rho.
     z = normals(seed, n)
-    dt = t
+    sq = math.sqrt(t)
     disc = math.exp(-r * t)
-    d = {}
-    sts = [s0 * math.exp((r - 0.5 * sigma**2) * t + sigma * math.sqrt(dt) * zi) for zi in z]
-    pay = [max(s - k, 0.0) for s in sts]
-    dts = [sts[i] * z[i] / math.sqrt(dt) for i in range(n)]
-    d2s = [dts[i] * (z[i] / math.sqrt(dt) - sigma * math.sqrt(dt)) for i in range(n)]
-    dsg = [sts[i] * (z[i] * math.sqrt(dt) - sigma * dt) for i in range(n)]
-    drs = [s * t for s in sts]
+    s_pz = s_pz2 = s_vega = s_p = 0.0
+    for zi in z:
+        st = s0 * math.exp((r - 0.5 * sigma**2) * t + sigma * sq * zi)
+        p = st - k
+        if p > 0.0:
+            s_pz += p * zi
+            s_pz2 += p * (zi * zi - 1.0)
+            s_vega += st * (sq * zi - sigma * t)
+            s_p += p
+    n_ = float(n)
+    price = disc * s_p / n_
+    delta = disc * (s_pz / n_) / (sigma * s0 * sq)
+    gamma = disc * (s_pz2 / n_ - sigma * sq * s_pz / n_) / (sigma**2 * t * s0**2)
+    vega = disc * s_vega / n_
+    theta = r * price - r * s0 * delta - 0.5 * sigma**2 * s0**2 * gamma
+    rho = t * (s0 * delta - price)
     return {
-        "Delta": disc * mean([p * w for p, w in zip(pay, dts)]) / (sigma * s0),
-        "Gamma": disc * mean([p * w for p, w in zip(pay, d2s)]) / (sigma**2 * s0**2),
-        "Vega": disc * mean([p * w for p, w in zip(pay, dsg)]) / sigma,
-        "Theta": -disc * mean([p * ((r - 0.5 * sigma**2) * s + 0.5 * sigma * w)
-                               for p, s, w in zip(pay, sts, dts)]) / t,
-        "Rho": disc * mean([p * w for p, w in zip(pay, drs)]) - t * disc * mean(pay),
+        "Delta": delta,
+        "Gamma": gamma,
+        "Vega": vega,
+        "Theta": theta,
+        "Rho": rho,
     }
 
 
 def digital(s0, k, t, r, sigma, q, n, eps, seed):
+    # Gaussian-kernel pathwise: h(s) = q*Phi((s-K)/eps), K_eps = phi(x)/eps,
+    # dK_eps/ds = -(x/eps)*K_eps with x = (s-K)/eps.
     z = normals(seed, n)
-    dt = t
+    sq = math.sqrt(t)
     disc = math.exp(-r * t)
     norm = eps * math.sqrt(2.0 * math.pi)
-    sts = [s0 * math.exp((r - 0.5 * sigma**2) * t + sigma * math.sqrt(dt) * zi) for zi in z]
-    da = [(1.0 / norm) * math.exp(-0.5 * ((s - k) / eps) ** 2) for s in sts]
-    dts = [sts[i] * z[i] / math.sqrt(dt) for i in range(n)]
-    d2s = [dts[i] * (z[i] / math.sqrt(dt) - sigma * math.sqrt(dt)) for i in range(n)]
-    dsg = [sts[i] * (z[i] * math.sqrt(dt) - sigma * dt) for i in range(n)]
-    w = [q * d for d in da]
+    sd = sg = sv = 0.0
+    for zi in z:
+        st = s0 * math.exp((r - 0.5 * sigma**2) * t + sigma * sq * zi)
+        x = (st - k) / eps
+        ke = math.exp(-0.5 * x * x) / norm
+        kep = -(x / eps) * ke
+        u = st / s0
+        sd += ke * u
+        sg += kep * u * u
+        sv += ke * st * (sq * zi - sigma * t)
+    n_ = float(n)
     return {
-        "Delta": disc * mean([a * b for a, b in zip(w, dts)]) / (sigma * s0),
-        "Gamma": disc * mean([a * b for a, b in zip(w, d2s)]) / (sigma**2 * s0**2),
-        "Vega": disc * mean([a * b for a, b in zip(w, dsg)]) / sigma,
+        "Delta": disc * q * sd / n_,
+        "Gamma": disc * q * sg / n_,
+        "Vega": disc * q * sv / n_,
     }
 
 
