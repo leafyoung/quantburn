@@ -1,5 +1,7 @@
 # quantburn
 
+[![CI](https://github.com/leafyoung/quantburn/actions/workflows/ci.yml/badge.svg)](https://github.com/leafyoung/quantburn/actions/workflows/ci.yml)
+
 Rust/Burn port of [`../quantorch/torchquantlib`](../quantorch) (the
 Python/PyTorch quant pricing library), converted per-file: one Rust module per
 Python source file, with embedded `#[cfg(test)]` parity tests against Python
